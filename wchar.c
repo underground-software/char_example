@@ -2,6 +2,7 @@
 #include <linux/init.h>
 #include <linux/printk.h>
 #include <linux/cdev.h>
+#include <linux/uaccess.h>
 #include <linux/fs.h>
 
 MODULE_LICENSE("GPL");
@@ -16,10 +17,14 @@ MODULE_AUTHOR("Joel Savitz <jsavitz@redhat.com>");
 
 int wchar_open(struct inode * inode, struct file * file);
 int wchar_close(struct inode * inode, struct file * file);
+ssize_t wchar_read(struct file * file, char * __user buf, size_t count, loff_t *offp);
+ssize_t wchar_write(struct file * file, const char * __user buf, size_t count, loff_t *offp);
 
 static struct cdev wchar_devs[WCHAR_MINOR_COUNT];
 
 static struct file_operations wchar_fops = {
+	.read = wchar_read,
+	.write = wchar_write,
 	.open = wchar_open,
 	.release = wchar_close,
 };
@@ -67,6 +72,24 @@ int wchar_close(struct inode * inode, struct file * file) {
 	pr_info("wchar close");
 
 	return 0;
+}
+
+static char string[] = "wchar\n";
+
+ssize_t wchar_read(struct file * file, char * __user buf, size_t count, loff_t *offp) {
+	pr_info("wchar read");
+
+	if (copy_to_user(buf, string, sizeof(string))) {
+		return -ENOMEM;
+	}
+
+	return sizeof(string);
+}
+
+ssize_t wchar_write(struct file * file, const char * __user buf, size_t count, loff_t *offp) {
+	pr_info("wchar write");
+
+	return -EINVAL;
 }
 
 module_init(wchar_init);
